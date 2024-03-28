@@ -1,14 +1,26 @@
 import os
 from dotenv import load_dotenv
-from llama_index.core import (VectorStoreIndex, SimpleDirectoryReader, StorageContext, load_index_from_storage)
+from llama_index.core import (
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+    StorageContext,
+    load_index_from_storage,
+)
 from flask import Flask, request, jsonify
+from llama_index.llms.openai import OpenAI
 from flask_bcrypt import Bcrypt
 import asyncio
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 load_dotenv()
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+MODEL = os.environ.get("MODEL")
+llm = OpenAI(MODEL)
 
 # Initialize LLaMA index and query engine
 PERSIST_DIR = "./storage"
@@ -20,54 +32,53 @@ else:
     storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
     index = load_index_from_storage(storage_context)
 
-query_engine = index.as_query_engine()
+from llama_index.core.memory import ChatMemoryBuffer
 
-users = []
-
-@app.route('/api/auth/signup', methods=['POST'])
-def signup():
-    try:
-        data = request.get_json()
-        username = data['username']
-        password = data['password']
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = {'username': username, 'password': hashed_password}
-        users.append(user)
-        return jsonify({'message': 'User created'}), 201
-    except Exception as e:
-        return jsonify({'message': 'Error creating user'}), 500
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    try:
-        data = request.get_json()
-        username = data['username']
-        password = data['password']
-        user = next((u for u in users if u['username'] == username), None)
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
-        if not bcrypt.check_password_hash(user['password'], password):
-            return jsonify({'message': 'Invalid password'}), 401
-        return jsonify({'message': 'Login successful'}), 200
-    except Exception as e:
-        return jsonify({'message': 'Error logging in'}), 500
+memory = ChatMemoryBuffer.from_defaults(token_limit=3900)
+chat_engine = index.as_chat_engine(
+    chat_mode="condense_plus_context",
+    memory=memory,
+    llm=llm,
+    context_prompt=(
+        "You are a chatbot, able to have normal interactions, as well as talk"
+        " about the resume of Varun Yadav."
+        "Here are the relevant documents for the context:\\n"
+        "{context_str}"
+        "\\nInstruction: Use the previous chat history, or the context above, to interact and help the user."
+    ),
+    verbose=False,
+)
 
 async def generate_response(query):
     try:
-        response = await asyncio.get_event_loop().run_in_executor(None, query_engine.query, query)
-        return response
+        response = await asyncio.get_event_loop().run_in_executor(
+            None, chat_engine.chat, query
+        )
+        response_str = str(response)
+        return response_str
     except Exception as e:
-        return 'Error generating response'
+        logging.error(f"Error generating response: {e}")
+        return "Error generating response"
 
-@app.route('/api/chat', methods=['POST'])
+@app.route("/api/query", methods=["POST"])
+async def query():
+    try:
+        data = request.get_json()
+        query = data["query"]
+        return "", 204
+    except Exception as e:
+        logging.error(f"Error getting query: {e}")
+        return jsonify({"message": "Error getting query"}), 500
+
+@app.route("/api/chat", methods=["GET"])
 async def chat():
     try:
-        data = await request.get_json()
-        query = data['query']
+        query = request.args.get("query")
         response = await generate_response(query)
-        return jsonify({'response': response}), 200
+        return jsonify({"response": response}), 200
     except Exception as e:
-        return jsonify({'message': 'Error generating response'}), 500
+        logging.error(f"Error generating response: {e}")
+        return jsonify({"message": "Error generating response"}), 500
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
