@@ -1,0 +1,8 @@
+python-dotenv
+llama-index
+google-auth
+google-auth-httplib2
+flask
+flask-bcrypt
+openai
+flask[async]
