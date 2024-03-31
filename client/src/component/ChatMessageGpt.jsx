@@ -2,7 +2,7 @@
 import React from "react";
 const ChatMessageGpt = ({ message }) => {
   return (
-    <div className="bg-[#FFFFFF1A]">
+    <div className="dark:bg-[#FFFFFF1A] bg-gray-300">
       <div className="chatgpt p-[12px] flex px-[40px] text-white ml-[10rem]">
         <div className="mb-[0.5rem] mt-[0.5rem] w-[40px] h-[40px] flex justify-center rounded-full bg-white text-gray-950">
           <svg
