@@ -60,7 +60,7 @@ async def generate_response(query):
         logging.error(f"Error generating response: {e}")
         return "Error generating response"
 
-@app.route("/api/query", methods=["POST"])
+@app.route("/query", methods=["POST"])
 async def query():
     try:
         data = request.get_json()
@@ -70,7 +70,7 @@ async def query():
         logging.error(f"Error getting query: {e}")
         return jsonify({"message": "Error getting query"}), 500
 
-@app.route("/api/chat", methods=["GET"])
+@app.route("/chat", methods=["GET"])
 async def chat():
     try:
         query = request.args.get("query")
@@ -82,3 +82,5 @@ async def chat():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    
+    
