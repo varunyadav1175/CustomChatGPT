@@ -12,11 +12,14 @@ from flask_bcrypt import Bcrypt
 import asyncio
 import logging
 
+from flask_cors import CORS
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 load_dotenv()
 app = Flask(__name__)
+CORS(app)
 bcrypt = Bcrypt(app)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
@@ -65,7 +68,7 @@ async def query():
     try:
         data = request.get_json()
         query = data["query"]
-        return "", 204
+        return jsonify({"response":"hii"}), 204
     except Exception as e:
         logging.error(f"Error getting query: {e}")
         return jsonify({"message": "Error getting query"}), 500
