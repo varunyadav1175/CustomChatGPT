@@ -8,7 +8,7 @@ const chatdetail = createContext();
 const Home = () => {
   const [chatlog, setChatlog] = useState([]);
   return (
-    <div className="flex flex-row">
+    <div className="flex flex-row divide-x-2 divide-black dark:divide-gray-500">
       <chatdetail.Provider value={{ chatlog, setChatlog }}>
         <ChatHistory />
         <Chats />

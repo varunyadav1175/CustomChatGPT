@@ -3,13 +3,13 @@ import { chatdetail } from "@/app/home/page";
 import React, { useContext } from "react";
 // import { FaPlusCircle } from "react-icons/fa";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button"
+
 import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Button,
-  button,
 } from "@nextui-org/react";
 
 const ChatHistory = () => {
@@ -21,10 +21,10 @@ const ChatHistory = () => {
   };
   return (
     <>
-      <div className="bg-[#171717] w-[20rem] h-[100vh] flex flex-col justify-between">
-        <button className="w-full" onClick={handleNewChat}>
-          <div className="hover:bg-[#212121] rounded-lg text-white flex flex-row justify-center items-center m-[1rem]">
-            <div className="mb-[0.5rem] mt-[0.5rem] w-[2.5rem] h-[2.5rem] flex justify-center rounded-full bg-white text-gray-950">
+      <div className="dark:bg-[#171717] bg-white w-[20rem] h-[100vh] flex flex-col justify-between">
+        <Button className="w-full mt-[1rem]" onClick={handleNewChat}>
+          <div className="dark:hover:bg-[#212121] hover:bg-[#d2cfcf] rounded-lg text-black dark:text-white flex flex-row justify-center items-center m-[1rem]">
+            <div className="mb-[0.5rem] mt-[0.5rem] w-[2.5rem] h-[2.5rem] flex justify-center rounded-full dark:bg-white bg-black dark:text-gray-950 text-white">
               <svg
                 width="1"
                 height="1"
@@ -43,13 +43,14 @@ const ChatHistory = () => {
             <div className="mb-[0.5rem] ml-[1rem] mt-[0.5rem]">New Chat</div>
             <span className="mb-[0.5rem] text-[1.5rem] ml-[2rem] mt-[0.5rem]"></span>
           </div>
-        </button>
+        </Button>
+
         <div className="p-[1rem]">
           <Dropdown>
             <DropdownTrigger>
               <Button
                 variant="bordered"
-                className="bottom-0 w-full border border-gray-700 text-white h-[3rem] p-[0.5rem] rounded-lg"
+                className="bottom-0 w-full border border-gray-700 text-black dark:text-white h-[3rem] p-[0.5rem] rounded-lg"
               >
                 {session.status === "authenticated"
                   ? session.data.user.name
@@ -64,23 +65,23 @@ const ChatHistory = () => {
             >
               <DropdownItem>
                 {session.status === "authenticated" ? (
-                  <button
+                  <Button
                     onClick={() => signOut("google")}
-                    className="w-full h-full text-white"
+                    className="w-full h-full dark:text-white text-black"
                   >
                     Log Out
-                  </button>
+                  </Button>
                 ) : session.status === "loading" ? null : (
-                  <button
+                  <Button
                     onClick={() =>
                       signIn("google", undefined, {
                         prompt: "select_account",
                       })
                     }
-                    className="w-full h-full text-white"
+                    className="w-full h-full dark:text-white text-black"
                   >
                     Login
-                  </button>
+                  </Button>
                 )}
               </DropdownItem>
             </DropdownMenu>
