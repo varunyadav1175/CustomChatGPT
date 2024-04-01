@@ -27,7 +27,6 @@ bcrypt = Bcrypt(app)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
 llm = OpenAI(MODEL)
-CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 
 # MongoDB connection
 MONGO_URI = os.environ.get("MONGO_URI")
@@ -62,114 +61,28 @@ chat_engine = index.as_chat_engine(
     verbose=False,
 )
 
-async def generate_response(query):
+async def generate_response(query, email):
     try:
         response = await asyncio.get_event_loop().run_in_executor(
             None, chat_engine.chat, query
         )
         response_str = str(response)
+        await users_collection.insert_one({
+            "email": email,
+            "query": query,
+            "date": datetime.now()
+        })
         return response_str
     except Exception as e:
         logging.error(f"Error generating response: {e}")
         return "Error generating response"
 
-# User database (simulated for this example)
-users = {}
-
-@app.route('/login', methods=['POST'])
-def login():
-    # Get the access token and ID token from the request
-    access_token = request.json.get('accessToken')
-    id_token_str = request.json.get('idToken')
-
-    # Verify the ID token
-    try:
-        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
-    except ValueError:
-        return jsonify({'error': 'Invalid ID token'}), 401
-
-    # Get the user's email from the ID token
-    email = info.get('email')
-
-    # Check if the user exists in the database
-    user = users_collection.find_one({'email': email})
-    if user:
-        # User already exists, update their data
-        users_collection.update_one({'email': email}, {'$set': {'accessToken': access_token}})
-    else:
-        # Create a new user
-        new_user = {
-            'email': email,
-            'accessToken': access_token,
-            'name': info.get('name'),
-            'picture': info.get('picture'),
-            'queries': []
-        }
-        users_collection.insert_one(new_user)
-
-    # Return a success response
-    return jsonify({'message': 'Login successful'}), 200
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    # Get the access token and ID token from the request
-    access_token = request.json.get('accessToken')
-    id_token_str = request.json.get('idToken')
-
-    # Verify the ID token
-    try:
-        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
-    except ValueError:
-        return jsonify({'error': 'Invalid ID token'}), 401
-
-    # Get the user's email from the ID token
-    email = info.get('email')
-
-    # Check if the user already exists
-    user = users_collection.find_one({'email': email})
-    if user:
-        return jsonify({'error': 'User already exists'}), 409
-
-    # Create a new user
-    new_user = {
-        'email': email,
-        'accessToken': access_token,
-        'name': info.get('name'),
-        'picture': info.get('picture'),
-        'queries': []
-    }
-    users_collection.insert_one(new_user)
-
-    # Return a success response
-    return jsonify({'message': 'Signup successful'}), 201
-
-
-@app.route("/query", methods=["POST"])
-async def query():
-    try:
-        data = request.get_json()
-        query = data["query"]
-        email = data["email"]  # Get the email from the request
-
-        response = await generate_response(query)
-
-        # Store the query and timestamp in the user's document
-        users_collection.update_one(
-            {'email': email},
-            {'$push': {'queries': {'query': query, 'timestamp': datetime.utcnow()}}}
-        )
-
-        return jsonify({"response": response}), 200
-
-    except Exception as e:
-        logging.error(f"Error getting query: {e}")
-        return jsonify({"message": "Error getting query"}), 500
-
 @app.route("/chat", methods=["GET"])
 async def chat():
     try:
         query = request.args.get("query")
-        response = await generate_response(query)
+        email = request.args.get("email")
+        response = await generate_response(query, email)
         return jsonify({"response": response}), 200
     except Exception as e:
         logging.error(f"Error generating response: {e}")
