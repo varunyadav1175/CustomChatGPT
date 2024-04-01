@@ -18,6 +18,7 @@ export function ColorTheme() {
   const { setTheme } = useTheme();
 
   return (
+    <div className="mt-[2rem]">
     <Dropdown>
       <DropdownTrigger asChild>
         <Button variant="outline" size="icon">
@@ -32,5 +33,6 @@ export function ColorTheme() {
         <DropdownItem onClick={() => setTheme("system")}>System</DropdownItem>
       </DropdownMenu>
     </Dropdown>
+    </div>
   );
 }

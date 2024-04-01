@@ -3,7 +3,6 @@ import React, { useState, useContext } from "react";
 import ChatMessageGpt from "./ChatMessageGpt";
 import ChatMessageUser from "./ChatMessageUser";
 import { chatdetail } from "@/app/home/page";
-import {ColorTheme} from "./ColorTheme";
 import axios from "axios";
 
 
@@ -21,7 +20,7 @@ const Chats = () => {
     const chatmessage = newMessage.message;
     console.log("chatmessage", chatmessage);
     try {
-      const response = await axios.get(`http://localhost:5000/api/chat?query=${chatmessage}`);
+      const response = await axios.get(`http://localhost:5000/chat?query=${chatmessage}`);
       console.log("Message sent successfully:", response);
       const gptMessage = { user: "gpt", message: response.data.response };
       setChatlog([...chatLogNew, gptMessage]);
@@ -33,7 +32,7 @@ const Chats = () => {
   return (
     <>
       <div className="dark:bg-[#212121] bg-white w-full h-[100vh] flex flex-col overflow-y-scroll">
-      <ColorTheme/>
+      
         <div className="chat-log text-left">
           {chatlog.map(({ user, message, index }) => {
             if (user === "me") {
