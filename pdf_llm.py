@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from llama_index.core import (
     VectorStoreIndex,
     SimpleDirectoryReader,
@@ -35,6 +36,17 @@ db = client.RecruitWizer
 users_collection = db.Users
 
 # Initialize LLaMA index and query engine
+=======
+from llama_index.core import (VectorStoreIndex,SimpleDirectoryReader,StorageContext,load_index_from_storage)
+import logging
+import sys
+
+
+load_dotenv()
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+>>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
 PERSIST_DIR = "./storage"
 if not os.path.exists(PERSIST_DIR):
     documents = SimpleDirectoryReader("data").load_data()
@@ -44,6 +56,7 @@ else:
     storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
     index = load_index_from_storage(storage_context)
 
+<<<<<<< HEAD
 from llama_index.core.memory import ChatMemoryBuffer
 
 memory = ChatMemoryBuffer.from_defaults(token_limit=3900)
@@ -90,3 +103,8 @@ async def chat():
 
 if __name__ == "__main__":
     app.run(debug=True)
+=======
+query_engine = index.as_query_engine()
+response = query_engine.query("which college did varun go to?")
+print(response)
+>>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
