@@ -15,7 +15,22 @@ import asyncio
 import logging
 from flask_cors import CORS
 from datetime import datetime
-from pymongo import MongoClient
+import psycopg2
+
+# PostgreSQL connection
+PG_HOST = os.environ.get("PG_HOST", "34.70.51.155")
+PG_PORT = os.environ.get("PG_PORT", "5432")
+PG_DATABASE = os.environ.get("PG_DATABASE")
+PG_USER = "postgres"
+PG_PASSWORD = "root"
+
+conn = psycopg2.connect(
+    host=PG_HOST,
+    port=PG_PORT,
+    database=PG_DATABASE,
+    user=PG_USER,
+    password=PG_PASSWORD,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,11 +43,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
 llm = OpenAI(MODEL)
 
-# MongoDB connection
-MONGO_URI = os.environ.get("MONGO_URI")
-client = MongoClient(MONGO_URI)
-db = client.RecruitWizer
-users_collection = db.Users
+
 
 # Initialize LLaMA index and query engine
 PERSIST_DIR = "./storage"
@@ -67,11 +78,13 @@ async def generate_response(query, email):
             None, chat_engine.chat, query
         )
         response_str = str(response)
-        await users_collection.insert_one({
-            "email": email,
-            "query": query,
-            "date": datetime.now()
-        })
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO users (email, query, date, response) VALUES (%s, %s, %s, %s)",
+            (email, query, datetime.now(), response_str),
+        )
+        conn.commit()
+        cur.close()
         return response_str
     except Exception as e:
         logging.error(f"Error generating response: {e}")
@@ -87,6 +100,25 @@ async def chat():
     except Exception as e:
         logging.error(f"Error generating response: {e}")
         return jsonify({"message": "Error generating response"}), 500
+
+@app.route("/history", methods=["GET"])
+def history():
+    try:
+        email = request.args.get("email")
+        if not email:
+            return jsonify({"message": "Email parameter is missing"}), 400
+
+        cur = conn.cursor()
+        cur.execute("SELECT date, query, response FROM users WHERE email = %s ORDER BY date DESC", (email,))
+        rows = cur.fetchall()
+        cur.close()
+
+        history_entries = [{"date": row[0], "query": row[1], "response": row[2]} for row in rows]
+        
+        return jsonify({"history": history_entries}), 200
+    except Exception as e:
+        logging.error(f"Error fetching history: {e}")
+        return jsonify({"message": "Error fetching history"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
