@@ -15,7 +15,6 @@ import asyncio
 import logging
 from flask_cors import CORS
 from datetime import datetime
-<<<<<<< HEAD
 import psycopg2
 
 # PostgreSQL connection
@@ -32,9 +31,6 @@ conn = psycopg2.connect(
     user=PG_USER,
     password=PG_PASSWORD,
 )
-=======
-from pymongo import MongoClient
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -46,18 +42,8 @@ bcrypt = Bcrypt(app)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
 llm = OpenAI(MODEL)
-<<<<<<< HEAD
 
 
-=======
-CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-
-# MongoDB connection
-MONGO_URI = os.environ.get("MONGO_URI")
-client = MongoClient(MONGO_URI)
-db = client.RecruitWizer
-users_collection = db.Users
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
 
 # Initialize LLaMA index and query engine
 PERSIST_DIR = "./storage"
@@ -86,17 +72,12 @@ chat_engine = index.as_chat_engine(
     verbose=False,
 )
 
-<<<<<<< HEAD
 async def generate_response(query, email):
-=======
-async def generate_response(query):
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
     try:
         response = await asyncio.get_event_loop().run_in_executor(
             None, chat_engine.chat, query
         )
         response_str = str(response)
-<<<<<<< HEAD
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO users (email, query, date, response) VALUES (%s, %s, %s, %s)",
@@ -104,124 +85,22 @@ async def generate_response(query):
         )
         conn.commit()
         cur.close()
-=======
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
         return response_str
     except Exception as e:
         logging.error(f"Error generating response: {e}")
         return "Error generating response"
 
-<<<<<<< HEAD
-=======
-# User database (simulated for this example)
-users = {}
-
-@app.route('/login', methods=['POST'])
-def login():
-    # Get the access token and ID token from the request
-    access_token = request.json.get('accessToken')
-    id_token_str = request.json.get('idToken')
-
-    # Verify the ID token
-    try:
-        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
-    except ValueError:
-        return jsonify({'error': 'Invalid ID token'}), 401
-
-    # Get the user's email from the ID token
-    email = info.get('email')
-
-    # Check if the user exists in the database
-    user = users_collection.find_one({'email': email})
-    if user:
-        # User already exists, update their data
-        users_collection.update_one({'email': email}, {'$set': {'accessToken': access_token}})
-    else:
-        # Create a new user
-        new_user = {
-            'email': email,
-            'accessToken': access_token,
-            'name': info.get('name'),
-            'picture': info.get('picture'),
-            'queries': []
-        }
-        users_collection.insert_one(new_user)
-
-    # Return a success response
-    return jsonify({'message': 'Login successful'}), 200
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    # Get the access token and ID token from the request
-    access_token = request.json.get('accessToken')
-    id_token_str = request.json.get('idToken')
-
-    # Verify the ID token
-    try:
-        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
-    except ValueError:
-        return jsonify({'error': 'Invalid ID token'}), 401
-
-    # Get the user's email from the ID token
-    email = info.get('email')
-
-    # Check if the user already exists
-    user = users_collection.find_one({'email': email})
-    if user:
-        return jsonify({'error': 'User already exists'}), 409
-
-    # Create a new user
-    new_user = {
-        'email': email,
-        'accessToken': access_token,
-        'name': info.get('name'),
-        'picture': info.get('picture'),
-        'queries': []
-    }
-    users_collection.insert_one(new_user)
-
-    # Return a success response
-    return jsonify({'message': 'Signup successful'}), 201
-
-
-@app.route("/query", methods=["POST"])
-async def query():
-    try:
-        data = request.get_json()
-        query = data["query"]
-        email = data["email"]  # Get the email from the request
-
-        response = await generate_response(query)
-
-        # Store the query and timestamp in the user's document
-        users_collection.update_one(
-            {'email': email},
-            {'$push': {'queries': {'query': query, 'timestamp': datetime.utcnow()}}}
-        )
-
-        return jsonify({"response": response}), 200
-
-    except Exception as e:
-        logging.error(f"Error getting query: {e}")
-        return jsonify({"message": "Error getting query"}), 500
-
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
 @app.route("/chat", methods=["GET"])
 async def chat():
     try:
         query = request.args.get("query")
-<<<<<<< HEAD
         email = request.args.get("email")
         response = await generate_response(query, email)
-=======
-        response = await generate_response(query)
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
         return jsonify({"response": response}), 200
     except Exception as e:
         logging.error(f"Error generating response: {e}")
         return jsonify({"message": "Error generating response"}), 500
 
-<<<<<<< HEAD
 @app.route("/history", methods=["GET"])
 def history():
     try:
@@ -241,7 +120,5 @@ def history():
         logging.error(f"Error fetching history: {e}")
         return jsonify({"message": "Error fetching history"}), 500
 
-=======
->>>>>>> 3860b5500d9ac566bbfabf6e25c91a8ebdf190a8
 if __name__ == "__main__":
     app.run(debug=True)
