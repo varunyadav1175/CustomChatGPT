@@ -2,13 +2,15 @@
 import React, { useState, useContext } from "react";
 import ChatMessageGpt from "./ChatMessageGpt";
 import ChatMessageUser from "./ChatMessageUser";
-import { chatdetail } from "@/app/home/page";
+import { chatdetail, emailDetail } from "@/app/home/page";
 import axios from "axios";
 
 
 const Chats = () => {
   const { chatlog, setChatlog } = useContext(chatdetail);
+  const {email}=useContext(emailDetail)
   const [input, setInput] = useState("");
+  console.log("email",email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +22,7 @@ const Chats = () => {
     const chatmessage = newMessage.message;
     console.log("chatmessage", chatmessage);
     try {
-      const response = await axios.get(`http://localhost:5000/chat?query=${chatmessage}`);
+      const response = await axios.get(`http://localhost:5000/chat?query=${chatmessage}&email=${email}`);
       console.log("Message sent successfully:", response);
       const gptMessage = { user: "gpt", message: response.data.response };
       setChatlog([...chatLogNew, gptMessage]);
