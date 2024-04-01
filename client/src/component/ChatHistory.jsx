@@ -1,6 +1,6 @@
 "use client";
-import { chatdetail } from "@/app/home/page";
-import React, { useContext } from "react";
+import { chatdetail, emailDetail } from "@/app/home/page";
+import React, { useContext, useEffect } from "react";
 // import { FaPlusCircle } from "react-icons/fa";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,13 @@ import {
 
 const ChatHistory = () => {
   const { setChatlog } = useContext(chatdetail);
+  const { setEmail } = useContext(emailDetail);
   const session = useSession();
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      setEmail(session.data.user.email);
+    }
+  }, [session.status]);
   console.log(session);
   const handleNewChat = () => {
     setChatlog([]);
