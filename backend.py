@@ -13,8 +13,9 @@ from llama_index.llms.openai import OpenAI
 from flask_bcrypt import Bcrypt
 import asyncio
 import logging
-
 from flask_cors import CORS
+from datetime import datetime
+from pymongo import MongoClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,6 +28,12 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
 llm = OpenAI(MODEL)
 CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+
+# MongoDB connection
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client.RecruitWizer
+users_collection = db.Users
 
 # Initialize LLaMA index and query engine
 PERSIST_DIR = "./storage"
@@ -77,7 +84,7 @@ def login():
 
     # Verify the ID token
     try:
-        info = id_token.verify_oauth2_token(id_token_str, client)
+        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
     except ValueError:
         return jsonify({'error': 'Invalid ID token'}), 401
 
@@ -85,16 +92,20 @@ def login():
     email = info.get('email')
 
     # Check if the user exists in the database
-    if email in users:
+    user = users_collection.find_one({'email': email})
+    if user:
         # User already exists, update their data
-        users[email]['accessToken'] = access_token
+        users_collection.update_one({'email': email}, {'$set': {'accessToken': access_token}})
     else:
         # Create a new user
-        users[email] = {
+        new_user = {
+            'email': email,
             'accessToken': access_token,
             'name': info.get('name'),
-            'picture': info.get('picture')
+            'picture': info.get('picture'),
+            'queries': []
         }
+        users_collection.insert_one(new_user)
 
     # Return a success response
     return jsonify({'message': 'Login successful'}), 200
@@ -107,7 +118,7 @@ def signup():
 
     # Verify the ID token
     try:
-        info = id_token.verify_oauth2_token(id_token_str, client)
+        info = id_token.verify_oauth2_token(id_token_str, requests.Request())
     except ValueError:
         return jsonify({'error': 'Invalid ID token'}), 401
 
@@ -115,15 +126,19 @@ def signup():
     email = info.get('email')
 
     # Check if the user already exists
-    if email in users:
+    user = users_collection.find_one({'email': email})
+    if user:
         return jsonify({'error': 'User already exists'}), 409
 
     # Create a new user
-    users[email] = {
+    new_user = {
+        'email': email,
         'accessToken': access_token,
         'name': info.get('name'),
-        'picture': info.get('picture')
+        'picture': info.get('picture'),
+        'queries': []
     }
+    users_collection.insert_one(new_user)
 
     # Return a success response
     return jsonify({'message': 'Signup successful'}), 201
@@ -133,8 +148,17 @@ def signup():
 async def query():
     try:
         data = request.get_json()
+        query = data["query"]
+        email = data["email"]  # Get the email from the request
 
-        response = await generate_response(data["query"])
+        response = await generate_response(query)
+
+        # Store the query and timestamp in the user's document
+        users_collection.update_one(
+            {'email': email},
+            {'$push': {'queries': {'query': query, 'timestamp': datetime.utcnow()}}}
+        )
+
         return jsonify({"response": response}), 200
 
     except Exception as e:
@@ -153,5 +177,3 @@ async def chat():
 
 if __name__ == "__main__":
     app.run(debug=True)
-    
-    
