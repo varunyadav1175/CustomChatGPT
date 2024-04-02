@@ -6,8 +6,6 @@ from llama_index.core import (
     StorageContext,
     load_index_from_storage,
 )
-from google.oauth2 import id_token
-from google.auth.transport import requests
 from flask import Flask, request, jsonify
 from llama_index.llms.openai import OpenAI
 from flask_bcrypt import Bcrypt
@@ -15,35 +13,28 @@ import asyncio
 import logging
 from flask_cors import CORS
 from datetime import datetime
-import psycopg2
+from pymongo import MongoClient
+import certifi
 
-# PostgreSQL connection
-PG_HOST = os.environ.get("PG_HOST", "34.70.51.155")
-PG_PORT = os.environ.get("PG_PORT", "5432")
-PG_DATABASE = os.environ.get("PG_DATABASE")
-PG_USER = "postgres"
-PG_PASSWORD = "root"
-
-conn = psycopg2.connect(
-    host=PG_HOST,
-    port=PG_PORT,
-    database=PG_DATABASE,
-    user=PG_USER,
-    password=PG_PASSWORD,
-)
+# MongoDB connection
+MONGO_URI = "mongodb+srv://varun:root@recruitwizer.aegr7xh.mongodb.net/?retryWrites=true&w=majority&appName=recruitwizer"
+ca_cert = certifi.where()
+client = MongoClient(MONGO_URI, tlsCAFile=ca_cert)
+db = client.get_database("recruitwizer")
+users_collection = db.users
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 load_dotenv()
+
 app = Flask(__name__)
 CORS(app)
 bcrypt = Bcrypt(app)
+
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MODEL = os.environ.get("MODEL")
 llm = OpenAI(MODEL)
-
-
 
 # Initialize LLaMA index and query engine
 PERSIST_DIR = "./storage"
@@ -56,7 +47,6 @@ else:
     index = load_index_from_storage(storage_context)
 
 from llama_index.core.memory import ChatMemoryBuffer
-
 memory = ChatMemoryBuffer.from_defaults(token_limit=3900)
 chat_engine = index.as_chat_engine(
     chat_mode="condense_plus_context",
@@ -65,9 +55,9 @@ chat_engine = index.as_chat_engine(
     context_prompt=(
         "You are a chatbot, able to have normal interactions, as well as talk"
         " about the resume of Varun Yadav."
-        "Here are the relevant documents for the context:\\n"
+        "Here are the relevant documents for the context:\\\\n"
         "{context_str}"
-        "\\nInstruction: Use the previous chat history, or the context above, to interact and help the user."
+        "\\\\nInstruction: Use the previous chat history, or the context above, to interact and help the user."
     ),
     verbose=False,
 )
@@ -78,13 +68,12 @@ async def generate_response(query, email):
             None, chat_engine.chat, query
         )
         response_str = str(response)
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO users (email, query, date, response) VALUES (%s, %s, %s, %s)",
-            (email, query, datetime.now(), response_str),
-        )
-        conn.commit()
-        cur.close()
+        users_collection.insert_one({
+            "email": email,
+            "query": query,
+            "date": datetime.now(),
+            "response": response_str
+        })
         return response_str
     except Exception as e:
         logging.error(f"Error generating response: {e}")
@@ -108,13 +97,7 @@ def history():
         if not email:
             return jsonify({"message": "Email parameter is missing"}), 400
 
-        cur = conn.cursor()
-        cur.execute("SELECT date, query, response FROM users WHERE email = %s ORDER BY date DESC", (email,))
-        rows = cur.fetchall()
-        cur.close()
-
-        history_entries = [{"date": row[0], "query": row[1], "response": row[2]} for row in rows]
-        
+        history_entries = list(users_collection.find({"email": email}, {"_id": 0}).sort("date", -1))
         return jsonify({"history": history_entries}), 200
     except Exception as e:
         logging.error(f"Error fetching history: {e}")
