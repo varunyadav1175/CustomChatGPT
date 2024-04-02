@@ -10,7 +10,7 @@ const Chats = () => {
   const { chatlog, setChatlog } = useContext(chatdetail);
   const {email}=useContext(emailDetail)
   const [input, setInput] = useState("");
-  console.log("email",email);
+  // console.log("email",email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,10 +20,10 @@ const Chats = () => {
 
     setInput("");
     const chatmessage = newMessage.message;
-    console.log("chatmessage", chatmessage);
+    // console.log("chatmessage", chatmessage);
     try {
       const response = await axios.get(`http://localhost:5000/chat?query=${chatmessage}&email=${email}`);
-      console.log("Message sent successfully:", response);
+      // console.log("Message sent successfully:", response);
       const gptMessage = { user: "gpt", message: response.data.response };
       setChatlog([...chatLogNew, gptMessage]);
     } catch (error) {
